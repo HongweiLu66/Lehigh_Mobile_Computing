@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "474818731458",
-    "project_id": "test-102ff",
-    "storage_bucket": "test-102ff.appspot.com"
+    "project_number": "205616303129",
+    "project_id": "hongweilehigh-mobile-app",
+    "storage_bucket": "hongweilehigh-mobile-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:474818731458:android:62fc081676b6f5d9de4a5b",
+        "mobilesdk_app_id": "1:205616303129:android:f7f9a0505bd8d742ce2e88",
         "android_client_info": {
           "package_name": "com.example.mobile_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCqjERKFwT8c-FINtCO1wBuQsJ66Wdgt5g"
+          "current_key": "AIzaSyAfCiuzxnKcGicU0-6ZLK9_tTeCZf2Js44"
         }
       ],
       "services": {
