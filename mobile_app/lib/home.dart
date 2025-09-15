@@ -520,9 +520,33 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Map<MarkerId, Marker> markers = <MarkerId, Marker>{};
 
+  // current location
+  Future<void> _saveCurrentLocationToDB(Position pos) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      // 建议单独一个集合存用户打点，避免与你现有的 campus 基础点集合冲突
+      await FirebaseFirestore.instance.collection('user_locations').add({
+        'uid': user?.uid,
+        'email': user?.email,
+        'college': dropdownValue.isEmpty ? null : dropdownValue, // 记录当前选择的学校
+        'latitude': pos.latitude,
+        'longitude': pos.longitude,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      Fluttertoast.showToast(msg: 'Location saved to database ');
+    } catch (e) {
+      Fluttertoast.showToast(msg: 'Failed to save location：$e');
+    }
+  }
+
+
   void _displayCurrentLocation() async {
     final location = await Geolocator.getCurrentPosition();
     _add(location.latitude, location.longitude, 'Your Location', true, -1);
+
+    await _saveCurrentLocationToDB(location);
 
     setState(() {
       _location = location;
