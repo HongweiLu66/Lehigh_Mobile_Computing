@@ -119,36 +119,24 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Future<List<Object?>> getComments(locValue) async {
-    CollectionReference collectionRef = FirebaseFirestore.instance
+  Future<List<Map<String, dynamic>>> getComments(String locValue) async {
+    final now = DateTime.now();
+    final qs = await FirebaseFirestore.instance
         .collection('comments')
-        .doc(locValue)
-        .collection("comments");
+        .where('location', isEqualTo: locValue)   // ★ 用字段筛选地点
+        .get();
 
-    QuerySnapshot querySnapshot = await collectionRef.get();
-
-    DateTime now = DateTime.now();
-    final allData = querySnapshot.docs
-        .map((doc) {
-          var data = doc.data();
-          if (data != null) {
-            // Explicitly cast data to Map<String, dynamic>
-            Map<String, dynamic> dataMap = data as Map<String, dynamic>;
-            DateTime? visibleTime =
-                (dataMap['visibleTime'] as Timestamp?)?.toDate();
-            if (visibleTime != null && now.isAfter(visibleTime)) {
-              if (dataMap['feel'] == 'g') {
-                return dataMap;
-              }
-            }
-          }
-          return null;
-        })
-        .where((data) => data != null)
-        .toList();
-
-    return allData;
+    final result = <Map<String, dynamic>>[];
+    for (final doc in qs.docs) {
+      final m = doc.data() as Map<String, dynamic>;
+      final vt = (m['visibleTime'] as Timestamp?)?.toDate();
+      if (vt != null && now.isAfter(vt)) {
+        result.add(m);
+      }
+    }
+    return result;
   }
+
 
   bool _isNSFW = false;
 
@@ -403,11 +391,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   );
                 }).toList(),
                 onChanged: (String? newValue) {
-                  selectedTone = newValue;
                   setState(() {
-                    selectedTone;
+                    selectedTone = newValue; // 确保真正更新到 state
                   });
                 },
+
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -426,46 +414,77 @@ class _MyHomePageState extends State<MyHomePage> {
         ElevatedButton(
           style:
               ElevatedButton.styleFrom(backgroundColor: Colors.indigo.shade300),
-          onPressed: () {
+          onPressed: () async {
             final filter = ProfanityFilter();
-            // implement - Check for profanity - 
-            //returns a msg "Please refrain from using profanity"(if profanity is present)
+            final text = cmntController.text.trim();
+
+            // implement - Check for profanity -
+            // returns a msg "Please refrain from using profanity"(if profanity is present)
             // hint: use hasProfanity() plugin, then change true to profanity check
             // your codes begin here
-            if (true){
-  
-            // end
-            //SUICIDAL MESSAGES FILTER HERE
+            if (filter.hasProfanity(text)) {
+              Fluttertoast.showToast(msg: "Please refrain from using profanity");
+              return;
             }
-            else {
-              // add code to set feelValue to g b n, 'Positive'='g', 'Negative'='b', 'Neutral'='n'
-              if (selectedTone != null) {
-                String feelValue;
-                // your codes begin here
 
-
-                // end
-                // Generating a random delay between 8 and 24 hours
-                int delayInHours = Random().nextInt(17) +
-                    8; // Generates a number between 0 and 16, then adds 8
-                DateTime postTime = DateTime.now();
-                DateTime visibleTime =
-                    postTime.add(Duration(hours: delayInHours));
-                // use FirebaseFirestore.instance to store the comment entry (data, user, feelvalue, posttime, visibletime)
-                // your codes begin here
-
-
-                // end
-                setState(() {
-                  selectedTone = null;
-                  cmntController.clear();
-                });
-                Navigator.of(context).pop();
+            final lower = text.toLowerCase();
+            final redFlags = [
+              "suicide",
+              "kill myself",
+              "end my life",
+              "self-harm",
+              "cut myself",
+              "want to die"
+            ];
+            if (redFlags.any((k) => lower.contains(k))) {
+              Fluttertoast.showToast(msg: "Message blocked due to self-harm content.");
+              return;
+            }
+            // end
+            // SUICIDAL MESSAGES FILTER HERE
+            
+            if (selectedTone != null) {
+              String feelValue;
+              // your codes begin here
+              if (selectedTone == 'Positive') {
+                feelValue = 'g';
+              } else if (selectedTone == 'Negative') {
+                feelValue = 'b';
               } else {
-                // Handle case when no tone is selected (Maybe show a snackbar or alert)
+                feelValue = 'n';
               }
+              // end
+
+              // Generating a random delay between 8 and 24 hours
+              int delayInHours = Random().nextInt(17) + 8;
+              DateTime postTime = DateTime.now();
+              DateTime visibleTime = postTime;
+
+              // DateTime visibleTime = postTime.add(Duration(hours: delayInHours));
+
+              // use FirebaseFirestore.instance to store the comment entry (data, user, feelvalue, posttime, visibletime)
+              // your codes begin here
+              await FirebaseFirestore.instance.collection('comments').add({
+                'data': text,
+                'user': FirebaseAuth.instance.currentUser?.email ?? 'anonymous',
+                'feel': feelValue,                 // 'g' / 'b' / 'n'
+                'postTime': Timestamp.fromDate(postTime),
+                'visibleTime': Timestamp.fromDate(visibleTime),
+                'location': locValue,              
+              });
+
+              // end
+
+              setState(() {
+                selectedTone = null;
+                cmntController.clear();
+              });
+              Navigator.of(context).pop();
+            } else {
+              Fluttertoast.showToast(msg: "Please select a tone for your comment.");
             }
           },
+
           child: const Text('Add Entry'),
         ),
         ElevatedButton(
@@ -525,11 +544,10 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
 
-      // 建议单独一个集合存用户打点，避免与你现有的 campus 基础点集合冲突
       await FirebaseFirestore.instance.collection('user_locations').add({
         'uid': user?.uid,
         'email': user?.email,
-        'college': dropdownValue.isEmpty ? null : dropdownValue, // 记录当前选择的学校
+        'college': dropdownValue.isEmpty ? null : dropdownValue, 
         'latitude': pos.latitude,
         'longitude': pos.longitude,
         'createdAt': FieldValue.serverTimestamp(),
