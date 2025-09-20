@@ -8,6 +8,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:mobile_app/home.dart';
 import 'package:mobile_app/main.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 
 class Groups extends StatelessWidget {
   const Groups({super.key});
@@ -91,9 +95,13 @@ class _MyHomePageState extends State<MyHomePage> {
           onPressed: () {
           // add the newly created group to the group list dropdown option (public private) auth!.email
           // your codes begin here
-
-
-
+          _groupList.add([cmntController.text, _pubpriv ? "Public" : "Private", auth!.email ?? 'anonymous', descController.text]);
+          _groupEntry.add(false);
+          setState(() {});
+          Navigator.of(context).pop();
+          cmntController.clear();
+          descController.clear();
+          _pubpriv = false;
           // end
           },
           style:
@@ -130,8 +138,9 @@ class _MyHomePageState extends State<MyHomePage> {
           onPressed: () {
             // show corresponding group description after click
             // your codes begin here
-
-
+            _groupEntry[index] = true;
+            setState(() {});
+            Navigator.of(context).pop();
             // end
           },
           style:
@@ -141,8 +150,10 @@ class _MyHomePageState extends State<MyHomePage> {
         ElevatedButton(
           onPressed: () {
             // your codes begin here
-
-
+            Navigator.of(context).pop();
+            _groupEntry[index] = false;
+            setState(() {});
+            Navigator.of(context).pop();
             // end
           },
           style:
